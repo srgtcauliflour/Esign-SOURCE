@@ -95,6 +95,15 @@ router.post('/download', express.json(), async (req, res) => {
   res.json({ ok: true, file: filename });
 });
 
+router.get('/downloads', (req, res) => {
+  const { downloads } = sessionHome.ensure(req.session.id);
+  const files = fs
+    .readdirSync(downloads)
+    .filter((f) => f.toLowerCase().endsWith('.ipa'))
+    .map((f) => ({ file: f, size: fs.statSync(path.join(downloads, f)).size }));
+  res.json({ files });
+});
+
 router.get('/file/:filename', (req, res) => {
   const { downloads } = sessionHome.ensure(req.session.id);
   const filename = path.basename(req.params.filename);

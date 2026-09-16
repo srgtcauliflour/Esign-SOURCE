@@ -6,6 +6,7 @@ const path = require('path');
 const sessionHome = require('./lib/sessionHome');
 const downloaderRoutes = require('./routes/downloader');
 const sourcesRoutes = require('./routes/sources');
+const signingRoutes = require('./routes/signing');
 
 const PORT = process.env.PORT || 4567;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
@@ -32,10 +33,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/downloader', downloaderRoutes);
 app.use('/api/sources', sourcesRoutes);
+app.use('/api/signing', signingRoutes);
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
-// Sweep idle per-session ipatool homes so old logins/keychains don't linger.
+// Sweep idle per-session dirs so old logins, certs, and downloads don't linger.
 setInterval(() => sessionHome.sweepIdle(), 60 * 60 * 1000);
 
 app.listen(PORT, () => {

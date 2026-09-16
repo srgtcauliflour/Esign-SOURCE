@@ -1,10 +1,12 @@
 (() => {
   const tabs = document.querySelectorAll('.tab-btn');
   const panels = document.querySelectorAll('.tab-panel');
+  const tabRefreshers = {};
 
   function activate(tabId) {
     tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === tabId));
     panels.forEach((p) => p.classList.toggle('active', p.id === `tab-${tabId}`));
+    tabRefreshers[tabId]?.();
   }
 
   tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab)));
@@ -195,10 +197,137 @@
       link.textContent = `Save ${data.file}`;
       link.className = 'btn small';
       status.appendChild(link);
+
+      const signBtn = document.createElement('button');
+      signBtn.type = 'button';
+      signBtn.textContent = 'Sign this →';
+      signBtn.className = 'btn small';
+      signBtn.addEventListener('click', () => {
+        pendingSignFile = data.file;
+        activate('signing');
+      });
+      status.appendChild(signBtn);
     });
 
     searchResults.appendChild(row);
   }
+
+  // ---------- Signing tab ----------
+  let pendingSignFile = null;
+  const noCertView = document.getElementById('sign-no-cert');
+  const hasCertView = document.getElementById('sign-has-cert');
+  const certForm = document.getElementById('cert-form');
+  const certStatus = document.getElementById('cert-status');
+  const certName = document.getElementById('cert-name');
+  const certDetails = document.getElementById('cert-details');
+  const certRemoveBtn = document.getElementById('cert-remove-btn');
+  const signSourceSelect = document.getElementById('sign-source-select');
+  const signIpaUpload = document.getElementById('sign-ipa-upload');
+  const signBtn = document.getElementById('sign-btn');
+  const signStatus = document.getElementById('sign-status');
+  const signResult = document.getElementById('sign-result');
+
+  function showCertView(hasCert, certificate) {
+    noCertView.classList.toggle('hidden', hasCert);
+    hasCertView.classList.toggle('hidden', !hasCert);
+    if (hasCert && certificate) {
+      certName.textContent = certificate.name || 'Certificate on file';
+      const bits = [certificate.type, certificate.organization, certificate.expiresAt && `expires ${certificate.expiresAt}`].filter(Boolean);
+      certDetails.textContent = bits.join(' · ');
+    }
+  }
+
+  async function refreshSigningTab() {
+    const res = await fetch('/api/signing/certificate');
+    const data = await res.json();
+    showCertView(data.hasCertificate, data.certificate);
+    if (data.hasCertificate) await loadSignSources();
+  }
+  tabRefreshers.signing = refreshSigningTab;
+
+  async function loadSignSources() {
+    const res = await fetch('/api/downloader/downloads');
+    const data = await res.json();
+    signSourceSelect.innerHTML = '<option value="">— none —</option>';
+    (data.files || []).forEach(({ file }) => {
+      const opt = document.createElement('option');
+      opt.value = file;
+      opt.textContent = file;
+      signSourceSelect.appendChild(opt);
+    });
+    if (pendingSignFile && (data.files || []).some((f) => f.file === pendingSignFile)) {
+      signSourceSelect.value = pendingSignFile;
+    }
+    pendingSignFile = null;
+  }
+
+  certForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setStatus(certStatus, 'Validating…', '');
+    const formData = new FormData();
+    formData.append('p12', document.getElementById('cert-p12').files[0]);
+    formData.append('provision', document.getElementById('cert-provision').files[0]);
+    formData.append('password', document.getElementById('cert-password').value);
+
+    const res = await fetch('/api/signing/certificate', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) {
+      setStatus(certStatus, data.error || 'Could not validate this certificate.', 'error');
+      return;
+    }
+    setStatus(certStatus, '', '');
+    certForm.reset();
+    showCertView(true, data.certificate);
+    await loadSignSources();
+  });
+
+  certRemoveBtn.addEventListener('click', async () => {
+    await fetch('/api/signing/certificate', { method: 'DELETE' });
+    showCertView(false);
+    signResult.innerHTML = '';
+    setStatus(signStatus, '', '');
+  });
+
+  signBtn.addEventListener('click', async () => {
+    const uploadFile = signIpaUpload.files[0];
+    const sourceFilename = signSourceSelect.value;
+    if (!uploadFile && !sourceFilename) {
+      setStatus(signStatus, 'Choose a downloaded .ipa or upload one.', 'error');
+      return;
+    }
+
+    setStatus(signStatus, 'Signing… this can take a while for large apps.', '');
+    signResult.innerHTML = '';
+
+    const formData = new FormData();
+    if (uploadFile) formData.append('ipa', uploadFile);
+    if (sourceFilename) formData.append('sourceFilename', sourceFilename);
+    formData.append('bundleId', document.getElementById('sign-bundle-id').value.trim());
+    formData.append('bundleName', document.getElementById('sign-bundle-name').value.trim());
+    formData.append('bundleVersion', document.getElementById('sign-bundle-version').value.trim());
+
+    const res = await fetch('/api/signing/sign', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) {
+      setStatus(signStatus, data.error || 'Signing failed.', 'error');
+      return;
+    }
+    setStatus(signStatus, '', '');
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = `/api/signing/file/${encodeURIComponent(data.file)}`;
+    downloadLink.textContent = `Save ${data.file}`;
+    downloadLink.className = 'btn small';
+
+    const installLink = document.createElement('a');
+    installLink.href = data.installUrl;
+    installLink.textContent = 'Install over-the-air (open in Safari on the device)';
+    installLink.className = 'btn small primary';
+
+    signResult.innerHTML = '';
+    signResult.appendChild(downloadLink);
+    signResult.appendChild(installLink);
+  });
 
   function setStatus(el, text, kind) {
     el.textContent = text;
