@@ -19,16 +19,11 @@ targets:
     sources:
       - path: Sources
     info:
-      properties:
-        CFBundleDisplayName: SideVault
-        SIDEVAULT_SERVER_URL: "$(SIDEVAULT_SERVER_URL)"
-        UILaunchScreen: {}
-        UIRequiresFullScreen: true
-        NSAppTransportSecurity:
-          # Loosened on purpose: this wrapper points at a self-hosted server the
-          # user names at build time, which may be a plain-HTTP LAN address
-          # during local testing rather than a publicly trusted HTTPS host.
-          NSAllowsArbitraryLoads: true
+      # A real, checked-in Info.plist (not XcodeGen-synthesized) — its
+      # NSAppTransportSecurity/UILaunchScreen/SIDEVAULT_SERVER_URL keys live
+      # there. XcodeGen excludes this path from the target's compiled/copied
+      # sources automatically since it's also used as info.path.
+      path: Sources/Info.plist
     settings:
       base:
         PRODUCT_NAME: SideVault
