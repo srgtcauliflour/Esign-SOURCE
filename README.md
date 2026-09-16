@@ -8,6 +8,8 @@ SideVault is a self-hosted sideloading hub with three tabs of real functionality
 
 Each browser session gets its own sandboxed storage on the server, so concurrent users never see each other's Apple ID logins, certificates, or files.
 
+There's also a native iOS wrapper for the web app itself — see [`ios/README.md`](ios/README.md) — so you get an actual installable app icon (built and signed with your own certificate via GitHub Actions) instead of a browser tab.
+
 ## Requirements
 
 - Node.js 18+

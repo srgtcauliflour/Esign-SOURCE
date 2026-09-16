@@ -1,0 +1,155 @@
+name: Build signed iOS app
+
+# Builds the thin WKWebView wrapper in ios/ (loads the SideVault web app
+# from a server you host elsewhere — see ios/README.md) and signs it with
+# your own certificate/provisioning profile, entirely inside this workflow.
+# Nothing here talks to the SideVault app itself; it's just for producing a
+# testable .ipa from your own Apple Developer signing materials.
+"on":
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: "URL of your SideVault server, e.g. https://sidevault.example.com"
+        required: true
+      bundle_id:
+        description: "Bundle identifier — must match your provisioning profile's App ID"
+        required: true
+      app_name:
+        description: "Display name shown under the app icon"
+        required: false
+        default: "SideVault"
+      export_method:
+        description: "Distribution method to sign for"
+        required: false
+        default: "development"
+        type: choice
+        options:
+          - development
+          - ad-hoc
+          - enterprise
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Import signing certificate and provisioning profile
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          PROVISION_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$P12_BASE64" ] || [ -z "$PROVISION_BASE64" ]; then
+            echo "::error::Missing IOS_P12_BASE64 or IOS_PROVISION_BASE64 repository secrets. See ios/README.md for setup." >&2
+            exit 1
+          fi
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          P12_PATH="$RUNNER_TEMP/certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+
+          echo -n "$P12_BASE64" | base64 --decode -o "$P12_PATH"
+          echo -n "$PROVISION_BASE64" | base64 --decode -o "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$P12_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed 's/"//g')
+
+          mkdir -p ~/Library/MobileDevice/"Provisioning Profiles"
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/"Provisioning Profiles/sidevault.mobileprovision"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "PROFILE_PATH=$PROFILE_PATH" >> "$GITHUB_ENV"
+
+      - name: Read signing identity and profile details
+        id: profile
+        run: |
+          set -euo pipefail
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" "$PROFILE_PLIST")
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print TeamIdentifier:0" "$PROFILE_PLIST")
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | head -n 1 | sed -E 's/.*"(.*)"/\1/')
+
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "::error::No codesigning identity found after importing the .p12 — check IOS_P12_PASSWORD." >&2
+            exit 1
+          fi
+
+          echo "uuid=$PROFILE_UUID" >> "$GITHUB_OUTPUT"
+          echo "team=$TEAM_ID" >> "$GITHUB_OUTPUT"
+          echo "identity=$SIGNING_IDENTITY" >> "$GITHUB_OUTPUT"
+
+      - name: Archive
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project SideVault.xcodeproj \
+            -scheme SideVault \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/SideVault.xcarchive" \
+            -destination "generic/platform=iOS" \
+            SIDEVAULT_SERVER_URL="${{ inputs.server_url }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="${{ inputs.bundle_id }}" \
+            PRODUCT_NAME="${{ inputs.app_name }}" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="${{ steps.profile.outputs.identity }}" \
+            DEVELOPMENT_TEAM="${{ steps.profile.outputs.team }}" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ steps.profile.outputs.uuid }}"
+
+      - name: Write export options
+        run: |
+          cat > "$RUNNER_TEMP/exportOptions.plist" << PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>${{ inputs.export_method }}</string>
+              <key>teamID</key>
+              <string>${{ steps.profile.outputs.team }}</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>${{ inputs.bundle_id }}</key>
+                  <string>${{ steps.profile.outputs.uuid }}</string>
+              </dict>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export .ipa
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/SideVault.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/exportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export"
+
+      - name: Upload signed .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: SideVault-signed-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          if-no-files-found: error
+
+      - name: Remove temporary keychain
+        if: always()
+        run: security delete-keychain "$KEYCHAIN_PATH" || true
