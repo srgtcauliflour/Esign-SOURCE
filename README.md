@@ -30,9 +30,9 @@ This app handles real Apple ID credentials. Keep the following in mind:
   - `COOKIE_SECURE=true` — cookies are only sent over HTTPS
   - `TRUST_PROXY=true` — Express trusts the proxy's `X-Forwarded-*` headers
   - `SESSION_SECRET=<random string>` — otherwise a random secret is generated per process restart, which logs everyone out on redeploy
-- **Per-session isolation.** Each browser session gets its own `HOME`/`XDG_CONFIG_HOME` under `data/sessions/<id>/`, so `ipatool`'s keychain and credentials are sandboxed per visitor. These directories (and their Apple ID sessions) are wiped on sign-out or automatically after 24 hours of inactivity.
-- **Linux keychain passphrase.** `ipatool` on Linux needs a keychain passphrase; SideVault generates and stores a random one per session automatically via `IPATOOL_KEYCHAIN_PASSPHRASE`, so you don't need to set anything yourself.
-- **CLI flags may drift.** `ipatool`'s flags have changed across releases — if login/search/download start failing, run `ipatool --help` (and the relevant subcommand's `--help`) against your installed version and adjust `lib/ipatool.js` if needed.
+- **Per-session isolation.** Each browser session gets its own `HOME` under `data/sessions/<id>/` (ipatool stores its state at `$HOME/.ipatool`), so `ipatool`'s keychain and credentials are sandboxed per visitor. These directories (and their Apple ID sessions) are wiped on sign-out or automatically after 24 hours of inactivity.
+- **Linux keychain passphrase.** `ipatool` has no env-var for its keychain passphrase — only the `--keychain-passphrase` flag. SideVault generates a random one per session and passes it on every invocation (see `lib/ipatool.js`), so you don't need to set anything yourself.
+- **CLI flags may drift.** `ipatool`'s flags have changed across releases. `lib/ipatool.js` was verified against `ipatool` v2.6.0's real `--help` output and actual JSON responses (login/search/purchase/download error and success shapes) — if a future release changes them, run `ipatool [command] --help` against your installed version and adjust `lib/ipatool.js`.
 
 ## Environment variables
 

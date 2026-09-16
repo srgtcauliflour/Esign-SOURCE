@@ -146,14 +146,18 @@
   });
 
   function renderResult(app) {
-    const bundleId = app.bundleID || app.bundleId || app.bundleIdentifier;
+    // ipatool's search output uses the raw App Store field names.
+    const bundleId = app.bundleId;
+    const name = app.trackName || bundleId;
+    const version = app.version ? `v${app.version}` : '';
+    const price = app.price === 0 ? 'Free' : app.price ? `$${app.price}` : '';
     const row = document.createElement('div');
     row.className = 'result-row';
     row.innerHTML = `
       <div class="icon"></div>
       <div class="meta">
-        <strong>${escapeHtml(app.name || bundleId)}</strong>
-        <span>${escapeHtml(bundleId || '')}</span>
+        <strong>${escapeHtml(name)}</strong>
+        <span>${[bundleId, version, price].filter(Boolean).map(escapeHtml).join(' · ')}</span>
       </div>
       <button class="btn small" data-action="license">Get license</button>
       <button class="btn small primary" data-action="download">Download</button>
@@ -178,7 +182,7 @@
       const res = await fetch('/api/downloader/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bundleId, name: app.name }),
+        body: JSON.stringify({ bundleId, name }),
       });
       const data = await res.json();
       if (!res.ok) {

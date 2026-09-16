@@ -11,7 +11,7 @@ function envFor(req) {
 }
 
 function looksLike2FA(result) {
-  const text = `${result.stderr} ${result.stdout}`.toLowerCase();
+  const text = `${result.message} ${result.stdout}`.toLowerCase();
   return text.includes('2fa') || text.includes('mfa') || text.includes('auth code') || text.includes('two-factor');
 }
 
@@ -24,11 +24,13 @@ router.post('/login', express.json(), async (req, res) => {
   const result = await ipatool.authLogin({ email, password, code }, env);
   sessionHome.touch(req.session.id);
 
-  if (!result.ok) {
-    if (looksLike2FA(result)) {
-      return res.status(200).json({ requiresCode: true, message: 'Enter the 2FA code sent to your Apple devices.' });
-    }
-    return res.status(401).json({ error: result.stderr || 'Login failed. Check your Apple ID and password.' });
+  // In non-interactive mode ipatool exits 0 even when it only got as far as
+  // "a 2FA code is required" — so that check has to run before looking at ok/success.
+  if (looksLike2FA(result)) {
+    return res.status(200).json({ requiresCode: true, message: 'Enter the 2FA code sent to your Apple devices.' });
+  }
+  if (!result.ok || result.json?.success !== true) {
+    return res.status(401).json({ error: result.message || 'Login failed. Check your Apple ID and password.' });
   }
   res.json({ ok: true, account: result.json || null });
 });
@@ -57,9 +59,9 @@ router.get('/search', async (req, res) => {
   const result = await ipatool.search(term, 10, env);
   sessionHome.touch(req.session.id);
   if (!result.ok) {
-    return res.status(400).json({ error: result.stderr || 'Search failed.' });
+    return res.status(400).json({ error: result.message || 'Search failed.' });
   }
-  const apps = (result.json && (result.json.apps || result.json.results)) || [];
+  const apps = result.json?.apps || [];
   res.json({ apps });
 });
 
@@ -69,8 +71,8 @@ router.post('/purchase', express.json(), async (req, res) => {
   const env = envFor(req);
   const result = await ipatool.purchase(bundleId, env);
   sessionHome.touch(req.session.id);
-  if (!result.ok) {
-    return res.status(400).json({ error: result.stderr || 'Could not obtain a license for this app.' });
+  if (!result.ok || result.json?.success !== true) {
+    return res.status(400).json({ error: result.message || 'Could not obtain a license for this app.' });
   }
   res.json({ ok: true });
 });
@@ -87,8 +89,8 @@ router.post('/download', express.json(), async (req, res) => {
   const result = await ipatool.download(bundleId, outPath, env);
   sessionHome.touch(req.session.id);
 
-  if (!result.ok || !fs.existsSync(outPath)) {
-    return res.status(400).json({ error: result.stderr || 'Download failed. The app may need a license first.' });
+  if (!result.ok || result.json?.success !== true || !fs.existsSync(outPath)) {
+    return res.status(400).json({ error: result.message || 'Download failed.' });
   }
   res.json({ ok: true, file: filename });
 });
