@@ -1,0 +1,16 @@
+[
+  { "id": "sidestore", "name": "SideStore Community Store", "description": "Emulators and jailbreak tools curated by the SideStore community.", "url": "https://community-apps.sidestore.io/sidecommunity.json" },
+  { "id": "apptesters", "name": "App Testers Repo", "description": "One of the largest AltStore sources, 2000+ IPA files for iOS 14-17.", "url": "https://repo.apptesters.org" },
+  { "id": "cypwn", "name": "CyPwn IPA Library", "description": "Large collection of apps, tweaks, and jailbreak files.", "url": "https://ipa.cypwn.xyz/cypwn.json" },
+  { "id": "oatmealdome", "name": "OatmealDome's Source", "description": "Official source for DolphiniOS, a GameCube/Wii emulator.", "url": "https://altstore.oatmealdome.me/" },
+  { "id": "flyinghead", "name": "Flyinghead Repository", "description": "Flycast: multiplatform Dreamcast/Naomi/Atomiswave emulator.", "url": "https://flyinghead.github.io/flycast-builds/altstore.json" },
+  { "id": "burrito", "name": "Burrito's AltStore", "description": "unc0ver, Sileo Demo, appdb, UTM, Provenance, iNDS.", "url": "https://burritosoftware.github.io/altstore/channels/burritosource.json" },
+  { "id": "wayfarer", "name": "Niantic Wayfarer Source", "description": "Unofficial Niantic Wayfarer app with dark mode support.", "url": "https://alts.lao.sb" },
+  { "id": "pokemmo", "name": "PokeMMO Source", "description": "Official distribution for the PokeMMO mobile game.", "url": "https://pokemmo.com/altstore/" },
+  { "id": "odyssey", "name": "Odyssey Repo", "description": "Jailbreak for iOS 13 - 13.7.", "url": "https://theodyssey.dev/altstore/odysseysource.json" },
+  { "id": "taurine", "name": "Taurine Repo", "description": "Jailbreak for iOS 14 - 14.3, installs Sileo.", "url": "https://taurine.app/altstore/taurinestore.json" },
+  { "id": "randomsource", "name": "Random Source", "description": "PPSSPP, unc0ver, chimera, and more.", "url": "https://randomblock1.com/altstore/apps.json" },
+  { "id": "provenance", "name": "Provenance EMU Source", "description": "Multi-emulator frontend for many classic consoles.", "url": "https://provenance-emu.com/apps.json" },
+  { "id": "ish", "name": "iSH Repo", "description": "Linux shell environment for iOS via x86 emulation.", "url": "https://ish.app/altstore.json" },
+  { "id": "swaggyp36000", "name": "swaggyP36000 IPA Library", "description": "Popular tweaked and premium apps.", "url": "https://raw.githubusercontent.com/swaggyP36000/TrollStore-IPAs/main/apps_esign.json" }
+]

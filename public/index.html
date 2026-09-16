@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SideVault</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">SV</span>
+        <span class="brand-name">SideVault</span>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button class="tab-btn active" data-tab="home">Home</button>
+        <button class="tab-btn" data-tab="sources">Sources</button>
+        <button class="tab-btn" data-tab="downloader">Downloader</button>
+        <button class="tab-btn" data-tab="about">About</button>
+      </nav>
+    </header>
+
+    <main class="content">
+      <!-- HOME -->
+      <section class="tab-panel active" id="tab-home">
+        <div class="hero">
+          <h1>Your sideloading hub</h1>
+          <p>Browse community app sources or pull your own purchased and free App Store apps down as signed-ready .ipa files, all from one place.</p>
+        </div>
+        <div class="card-grid">
+          <div class="card">
+            <h3>App Sources</h3>
+            <p>Curated AltStore-style repos with emulators, tools, and utilities.</p>
+            <button class="btn" data-goto="sources">Browse sources</button>
+          </div>
+          <div class="card">
+            <h3>IPA Downloader</h3>
+            <p>Sign in with your own Apple ID and download your own apps as .ipa files, powered by ipatool.</p>
+            <button class="btn" data-goto="downloader">Open downloader</button>
+          </div>
+          <div class="card">
+            <h3>Your data stays yours</h3>
+            <p>Each browser session gets an isolated, sandboxed credential store on the server. Nothing is shared between visitors.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOURCES -->
+      <section class="tab-panel" id="tab-sources">
+        <h2>App Sources</h2>
+        <p class="muted">Third-party AltStore-format repositories. SideVault only reads their public app catalogs — it doesn't host any of this content.</p>
+        <div id="sources-list" class="sources-list"></div>
+        <div id="source-apps" class="source-apps"></div>
+      </section>
+
+      <!-- DOWNLOADER -->
+      <section class="tab-panel" id="tab-downloader">
+        <h2>IPA Downloader</h2>
+        <p class="muted">Uses <a href="https://github.com/majd/ipatool" target="_blank" rel="noopener">ipatool</a> on the server to talk to Apple's App Store on your behalf. Your Apple ID password is sent to this server only, over this request — never to a third party. Requires <code>ipatool</code> to be installed where this app runs.</p>
+
+        <div id="dl-logged-out">
+          <form id="login-form" class="stack">
+            <label>Apple ID email
+              <input type="email" id="login-email" required autocomplete="username" />
+            </label>
+            <label>Password
+              <input type="password" id="login-password" required autocomplete="current-password" />
+            </label>
+            <label id="code-field" class="hidden">2FA code
+              <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" />
+            </label>
+            <button class="btn primary" type="submit">Sign in</button>
+            <p id="login-status" class="status"></p>
+          </form>
+        </div>
+
+        <div id="dl-logged-in" class="hidden">
+          <div class="row space-between">
+            <span id="account-label" class="muted"></span>
+            <button class="btn subtle" id="logout-btn">Sign out &amp; wipe session</button>
+          </div>
+
+          <form id="search-form" class="row">
+            <input type="text" id="search-term" placeholder="Search the App Store, e.g. Bear, Deliveries..." required />
+            <button class="btn primary" type="submit">Search</button>
+          </form>
+          <p id="search-status" class="status"></p>
+
+          <div id="search-results" class="results-list"></div>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="tab-panel" id="tab-about">
+        <h2>About SideVault</h2>
+        <p>SideVault is a self-hosted app for browsing community IPA sources and downloading your own App Store apps for personal sideloading, resigning, or archival.</p>
+        <ul class="about-list">
+          <li>Downloads only apps tied to the Apple ID that requests them — you must own or have a free license for the app.</li>
+          <li>Runs best on your own machine or private network. If you expose it to other people over a real network, put it behind HTTPS and set <code>COOKIE_SECURE=true</code> and <code>TRUST_PROXY=true</code>.</li>
+          <li>Each browser session gets its own sandboxed <code>ipatool</code> home directory; credentials are never shared across sessions and are wiped on sign-out or after 24h idle.</li>
+          <li>This tool does not sign or install IPA files itself — pair the downloaded .ipa with your own signer (AltStore, SideStore, Sideloadly, or your own certificate).</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
