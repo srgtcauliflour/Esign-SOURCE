@@ -1,0 +1,16 @@
+{
+  "name": "sidevault",
+  "version": "1.0.0",
+  "description": "SideVault — a self-hosted sideloading hub: browse alternative app sources and download your own purchased/free App Store apps as .ipa files via ipatool.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "multer": "^2.4.0"
+  }
+}

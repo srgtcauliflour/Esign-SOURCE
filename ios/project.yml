@@ -1,0 +1,37 @@
+name: SideVault
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SIDEVAULT_SERVER_URL: "http://localhost:4567"
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  SideVault:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      properties:
+        CFBundleDisplayName: SideVault
+        SIDEVAULT_SERVER_URL: "$(SIDEVAULT_SERVER_URL)"
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        NSAppTransportSecurity:
+          # Loosened on purpose: this wrapper points at a self-hosted server the
+          # user names at build time, which may be a plain-HTTP LAN address
+          # during local testing rather than a publicly trusted HTTPS host.
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_NAME: SideVault
+        # Overridden from the CI workflow via xcodebuild's command-line build
+        # setting syntax; this placeholder only applies to a local Xcode build.
+        PRODUCT_BUNDLE_IDENTIFIER: "com.sidevault.app"
